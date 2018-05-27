@@ -1,20 +1,20 @@
 {-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE OverloadedLabels  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
-{-# LANGUAGE OverloadedLabels  #-}
 
 module Main where
 
 import           RIO
 
-import           Data.Extensible
 import qualified Data.ByteString.Char8  as C8
-import           Network.HTTP.Conduit
-import           Say
-import           Web.Authenticate.OAuth
+import           Data.Extensible        (nil, (<:), (@=))
+import           Network.HTTP.Conduit   (newManager, tlsManagerSettings)
+import           Say                    (say)
+import           Web.Authenticate.OAuth (OAuth (..), newCredential, newOAuth)
 
-import           CLI                    (CLI(..), getCliArgs)
-import           Lib                    (App, Config, ResultType(..),
+import           CLI                    (CLI (..), getCliArgs)
+import           Lib                    (App, Config, ResultType (..),
                                          askAPILayer, basicApiLayer, runApp)
 
 serverName :: String
@@ -40,7 +40,7 @@ sortTweets query result count = do
     say $ "Number of tweets:   " <> tshow (length tws)
     mapM_ (\t -> do
         let userName = t ^. #userName
-        let twt   = t ^. #tweet
+        let twt      = t ^. #tweet
         say $ "**" <> userName <> "**\n" <>  twt <> "\n") tws
 
 userTweets :: App ()
@@ -71,6 +71,7 @@ main = do
                <: #apiLayer   @= basicApiLayer
                <: nil
     args <- getCliArgs
+    -- Configuration done, don't need IO below
     case args of
         (SearchTweets keyword) -> runApp (sortTweets keyword Mixed 100) config
         (CountTweets keyword)  -> runApp (countTweets keyword Mixed) config

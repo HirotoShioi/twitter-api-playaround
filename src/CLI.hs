@@ -3,11 +3,13 @@ module CLI
     , CLI(..)
     ) where
 
-import RIO
-import           Options.Applicative (Parser, ParserInfo, argument, command, execParser, fullDesc, header,
-                                      help, helper, hsubparser, info, infoOption, long, metavar,
-                                      progDesc, str, (<**>))
-import           Paths_school_aeson (version)
+import           RIO
+
+import           Options.Applicative (Parser, ParserInfo, argument, command,
+                                      execParser, fullDesc, header, help,
+                                      helper, hsubparser, info, infoOption,
+                                      long, metavar, progDesc, str, (<**>))
+import           Paths_school_aeson  (version)
 
 data CLI = SearchTweets String
          | CountTweets String

@@ -1,19 +1,20 @@
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE RankNTypes                 #-}
-{-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE OverloadedLabels           #-}
+{-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE TypeOperators              #-}
-{-# LANGUAGE DataKinds                  #-}
 
 module Lib where
 
 import           RIO
 
 import           Data.Extensible
-import           Network.HTTP.Conduit
-import           Web.Authenticate.OAuth
-import           Types
+import           Network.HTTP.Conduit   (Manager, httpLbs, parseRequest,
+                                         responseBody)
+import           Web.Authenticate.OAuth (Credential, OAuth, signOAuth)
+
+import           Types                  (Tweet, decodeTweets, decodeUserTweets)
 
 data ResultType =
       Mixed
@@ -59,6 +60,18 @@ askAPILayer getter = do
     cfg <- ask
     pure $ getter (cfg ^. #apiLayer)
 
+fetchTweets ::  (MonadReader Config m, MonadIO m, MonadThrow m)
+                => String
+                -> m LByteString
+fetchTweets url = do
+    cfg <- ask
+    let oauth      = cfg ^. #oauth
+    let credential = cfg ^. #credential
+    let manager    = cfg ^. #manager
+    req <- parseRequest url
+    signedreq <- signOAuth oauth credential req
+    responseBody <$> httpLbs signedreq manager
+
 searchUrl :: String -> ResultType -> Int -> String
 searchUrl hashtag t counts=
     "https://api.twitter.com/1.1/search/tweets.json?q=%23"
@@ -66,7 +79,7 @@ searchUrl hashtag t counts=
         <> "&result_type=" <> renderResultType t
         <> "&count=" <> show counts
 
-fetchHashtagTweets :: (MonadReader Config m, MonadIO m, MonadThrow m) 
+fetchHashtagTweets :: (MonadReader Config m, MonadIO m, MonadThrow m)
             => String
             -> ResultType
             -> Int
@@ -89,15 +102,3 @@ fetchUserTweets = do
     case eitherRes of
       Left err -> throwString err
       Right ts -> return ts
-
-fetchTweets ::  (MonadReader Config m, MonadIO m, MonadThrow m)
-                => String
-                -> m LByteString
-fetchTweets url = do
-    cfg <- ask
-    let oauth      = cfg ^. #oauth
-    let credential = cfg ^. #credential
-    let manager    = cfg ^. #manager
-    req <- parseRequest url
-    signedreq <- signOAuth oauth credential req
-    responseBody <$> httpLbs signedreq manager

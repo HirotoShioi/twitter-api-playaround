@@ -1,20 +1,21 @@
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE OverloadedLabels  #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module Types
     ( Tweet
-    , decodeTweets 
+    , decodeTweets
     , decodeUserTweets
     ) where
 
 import           RIO
 
-import           Data.Aeson
-import           Data.Aeson.Types
-import           Data.Extensible
+import           Data.Aeson                 (Value, eitherDecode)
+import           Data.Aeson.Types           (Parser, parseEither, withObject,
+                                             (.:))
 import qualified Data.ByteString.Lazy.Char8 as C8
+import           Data.Extensible
 
 decodeTweets :: C8.ByteString -> Either String [Tweet]
 decodeTweets bs =  do
