@@ -14,10 +14,9 @@ import           RIO
 import           Data.Aeson                 (Value, eitherDecode)
 import           Data.Aeson.Types           (Parser, parseEither, withObject,
                                              (.:))
-import qualified Data.ByteString.Lazy.Char8 as C8
 import           Data.Extensible
 
-decodeTweets :: C8.ByteString -> Either String [Tweet]
+decodeTweets :: LByteString -> Either String [Tweet]
 decodeTweets bs =  do
   jsons <- eitherDecode bs
   parseEither tweets jsons
@@ -28,7 +27,7 @@ tweets = withObject "tweets" $ \o -> do
     mapM decodeTweet tws
 
 
-decodeUserTweets :: C8.ByteString -> Either String [Tweet]
+decodeUserTweets :: LByteString -> Either String [Tweet]
 decodeUserTweets bs =  do
     jsons <- eitherDecode bs
     parseEither (mapM decodeTweet) jsons
