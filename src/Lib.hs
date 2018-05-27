@@ -66,8 +66,8 @@ fetchTweets ::  (MonadReader Config m, MonadIO m, MonadThrow m)
 fetchTweets url = do
     cfg <- ask
     let oauth      = cfg ^. #oauth
-    let credential = cfg ^. #credential
-    let manager    = cfg ^. #manager
+        credential = cfg ^. #credential
+        manager    = cfg ^. #manager
     req <- parseRequest url
     signedreq <- signOAuth oauth credential req
     responseBody <$> httpLbs signedreq manager

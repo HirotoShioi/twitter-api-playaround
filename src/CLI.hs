@@ -30,13 +30,13 @@ cmdCountTweets = CountTweets <$> argument str
 -- | Parser for CLI commands
 cli :: Parser CLI
 cli = hsubparser $ mconcat
-  [ command "search-tweets" (info cmdSearchTweets
-      (progDesc "Look up tweets with given hashtag"))
-  , command "count-tweets" (info cmdCountTweets
-      (progDesc "Count tweets with given hashtag"))
-  , command "user-timeline" (info (pure UserTimeline)
-      (progDesc "Fetch user's timeline"))
-  ]
+    [ command "search-tweets" (info cmdSearchTweets
+        (progDesc "Look up tweets with given hashtag"))
+    , command "count-tweets" (info cmdCountTweets
+        (progDesc "Count tweets with given hashtag"))
+    , command "user-timeline" (info (pure UserTimeline)
+        (progDesc "Fetch user's timeline"))
+    ]
 
 -- | Get CLI arguments from command line
 getCliArgs :: IO CLI
