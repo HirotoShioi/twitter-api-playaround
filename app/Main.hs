@@ -1,4 +1,6 @@
+{-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes        #-}
 {-# LANGUAGE RecordWildCards   #-}
 
 module Main where
@@ -10,6 +12,8 @@ import           Network.HTTP.Conduit
 import           Say
 import           Web.Authenticate.OAuth
 
+import           Lib                    (App, Config (..), ResultType(..), ApiLayer(..),
+                                         askAPILayer, basicApiLayer, runApp)
 import           Types
 
 serverName :: String
@@ -21,12 +25,6 @@ authFile = "./secrets/auth"
 credentialFile :: FilePath
 credentialFile = "./secrets/credentials"
 
-data Config = Config
-    { cfgOAuth      :: !OAuth
-    , cfgCredential :: !Credential
-    , cfgManager    :: !Manager
-    }
-
 setOauth :: String -> ByteString -> ByteString -> OAuth -- OAuth
 setOauth name key secret = newOAuth
     { oauthServerName     = name
@@ -34,43 +32,41 @@ setOauth name key secret = newOAuth
     , oauthConsumerSecret = secret
     }
 
-data ResultType =
-      Mixed
-    | Recent
-    | Popular
+sortTweets :: String -> ResultType -> Int  -> App ()
+sortTweets query result count = do
+    fetchSearchTweets <- askAPILayer alFetchTweets
+    tws <- fetchSearchTweets query result count
+    say $ "Number of tweets:   " <> tshow (length tws)
+    mapM_ (\Tweet{..} -> say $ "**" <> tUserName <> "**\n" <>  tText <> "\n") tws
 
-renderResultType :: ResultType -> String
-renderResultType Mixed   = "mixed"
-renderResultType Recent  = "recent"
-renderResultType Popular = "popular"
+userTweets :: App ()
+userTweets = do
+    fetchUserTweets <- askAPILayer alFetchUserTweets
+    tws <- fetchUserTweets
+    forM_ tws (\Tweet{..} ->
+        say tText)
 
-searchUrl :: String -> ResultType -> Int -> String
-searchUrl hashtag t counts=
-    "https://api.twitter.com/1.1/search/tweets.json?q=%23"
-        <> hashtag
-        <> "&result_type=" <> renderResultType t
-        <> "&count=" <> show counts
-
-timeline :: Config -> String -> ResultType -> Int -> IO [Tweet]
-timeline Config{..} query result count = do
-    req <- parseRequest $ searchUrl query result count
-    signedreq <- signOAuth cfgOAuth cfgCredential req
-    res <- httpLbs signedreq cfgManager
-    let eitherRes = decodeTweets $ responseBody res
-    case eitherRes of
-      Left err -> throwString err
-      Right ts -> return ts
+countTweets :: String -> ResultType -> App ()
+countTweets query result = do
+    fetchSearchTweets <- askAPILayer alFetchTweets
+    counts <- length <$> fetchSearchTweets query result 100
+    say $ "Fetched " <> tshow counts <> " tweets!"
 
 main :: IO ()
 main = do
-    auths <- readFileBinary authFile
+    auths      <- readFileBinary authFile
     credential <- readFileBinary credentialFile
-    manager <- newManager tlsManagerSettings
+    manager    <- newManager tlsManagerSettings
     let (consumerKey: consumerSecret: _) = C8.lines auths
-        (token: tokenSecret: _) = C8.lines credential
-        oauth = setOauth serverName consumerKey consumerSecret
-        cred = newCredential token tokenSecret
-        config = Config oauth cred manager
-    twts <- timeline config "ねむい" Mixed 100
-    say $ "Number of tweets:   " <> tshow (length twts)
-    mapM_ (\Tweet{..} -> say $ "**" <> tUserName <> "**\n" <>  tText <> "\n") twts
+    let (token: tokenSecret: _) = C8.lines credential
+    let oauth   = setOauth serverName consumerKey consumerSecret
+    let cred    = newCredential token tokenSecret
+    let keyword = "ポケモン"
+    let config  = Config { cfgOAuth      = oauth
+                         , cfgCredential = cred
+                         , cfgManager    = manager
+                         , cfgAPILayer   = basicApiLayer
+                         }
+    runApp userTweets config
+    runApp (sortTweets keyword Mixed 100) config
+    runApp (countTweets keyword Mixed) config

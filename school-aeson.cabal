@@ -1,0 +1,95 @@
+-- This file has been generated from package.yaml by hpack version 0.20.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: 90942097264f44035b8b0416362465d1a9b05203ddba96b54df494e594e72a38
+
+name:           school-aeson
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/HirotoShioi/school-aeson#readme>
+homepage:       https://github.com/HirotoShioi/school-aeson#readme
+bug-reports:    https://github.com/HirotoShioi/school-aeson/issues
+author:         Hiroto Shioi
+maintainer:     hiroto.shioi@iohk.io
+copyright:      2018 Hiroto Shioi
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+cabal-version:  >= 1.10
+
+extra-source-files:
+    ChangeLog.md
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/HirotoShioi/school-aeson
+
+library
+  hs-source-dirs:
+      src
+  ghc-options:
+    -Wall
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , bytestring
+    , conduit
+    , conduit-extra
+    , extensible
+    , http-conduit
+    , resourcet
+    , rio
+    , text
+  exposed-modules:
+      Lib
+    , Types
+  other-modules:
+      Paths_school_aeson
+  default-language: Haskell2010
+  default-extensions:
+    NoImplicitPrelude
+
+executable school-aeson-exe
+  main-is: Main.hs
+  hs-source-dirs:
+      app
+  ghc-options: 
+    -Wall
+    -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , authenticate-oauth
+    , base >=4.7 && <5
+    , bytestring
+    , extensible
+    , http-conduit
+    , say
+    , school-aeson
+    , rio
+    , text
+    , time
+    , unliftio
+  other-modules:
+      Paths_school_aeson
+  default-language: Haskell2010
+  default-extensions:
+     NoImplicitPrelude
+
+test-suite school-aeson-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  hs-source-dirs:
+      test
+  ghc-options: 
+      -Wall
+      -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , school-aeson
+    , rio
+  other-modules:
+      Paths_school_aeson
+  default-language: Haskell2010
+  default-extensions:
+     NoImplicitPrelude
