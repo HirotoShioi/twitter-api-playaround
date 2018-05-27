@@ -38,11 +38,13 @@ library
     , conduit-extra
     , extensible
     , http-conduit
+    , optparse-applicative
     , resourcet
     , rio
     , text
   exposed-modules:
-      Lib
+      CLI
+    , Lib
     , Types
   other-modules:
       Paths_school_aeson

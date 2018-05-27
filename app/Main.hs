@@ -1,20 +1,21 @@
 {-# LANGUAGE FlexibleContexts  #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
-{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE OverloadedLabels  #-}
 
 module Main where
 
 import           RIO
 
+import           Data.Extensible
 import qualified Data.ByteString.Char8  as C8
 import           Network.HTTP.Conduit
 import           Say
 import           Web.Authenticate.OAuth
 
-import           Lib                    (App, Config (..), ResultType(..), ApiLayer(..),
+import           CLI                    (CLI(..), getCliArgs)
+import           Lib                    (App, Config, ResultType(..),
                                          askAPILayer, basicApiLayer, runApp)
-import           Types
 
 serverName :: String
 serverName = "api.twitter.com"
@@ -34,23 +35,25 @@ setOauth name key secret = newOAuth
 
 sortTweets :: String -> ResultType -> Int  -> App ()
 sortTweets query result count = do
-    fetchSearchTweets <- askAPILayer alFetchTweets
+    fetchSearchTweets <- askAPILayer (^. #fetchHashtagTweets)
     tws <- fetchSearchTweets query result count
     say $ "Number of tweets:   " <> tshow (length tws)
-    mapM_ (\Tweet{..} -> say $ "**" <> tUserName <> "**\n" <>  tText <> "\n") tws
+    mapM_ (\t -> do
+        let userName = t ^. #userName
+        let twt   = t ^. #tweet
+        say $ "**" <> userName <> "**\n" <>  twt <> "\n") tws
 
 userTweets :: App ()
 userTweets = do
-    fetchUserTweets <- askAPILayer alFetchUserTweets
+    fetchUserTweets <- askAPILayer (^. #fetchUserTweets)
     tws <- fetchUserTweets
-    forM_ tws (\Tweet{..} ->
-        say tText)
+    forM_ tws (\t -> say (t ^. #tweet))
 
 countTweets :: String -> ResultType -> App ()
 countTweets query result = do
-    fetchSearchTweets <- askAPILayer alFetchTweets
-    counts <- length <$> fetchSearchTweets query result 100
-    say $ "Fetched " <> tshow counts <> " tweets!"
+    fetchSearchTweets <- askAPILayer (^. #fetchHashtagTweets)
+    tweets <- fetchSearchTweets query result 100
+    say $ "Fetched " <> tshow (length tweets) <> " tweets!"
 
 main :: IO ()
 main = do
@@ -61,12 +64,14 @@ main = do
     let (token: tokenSecret: _) = C8.lines credential
     let oauth   = setOauth serverName consumerKey consumerSecret
     let cred    = newCredential token tokenSecret
-    let keyword = "ポケモン"
-    let config  = Config { cfgOAuth      = oauth
-                         , cfgCredential = cred
-                         , cfgManager    = manager
-                         , cfgAPILayer   = basicApiLayer
-                         }
-    runApp userTweets config
-    runApp (sortTweets keyword Mixed 100) config
-    runApp (countTweets keyword Mixed) config
+    let config :: Config
+        config  = #oauth      @= oauth
+               <: #credential @= cred
+               <: #manager    @= manager
+               <: #apiLayer   @= basicApiLayer
+               <: nil
+    args <- getCliArgs
+    case args of
+        (SearchTweets keyword) -> runApp (sortTweets keyword Mixed 100) config
+        (CountTweets keyword)  -> runApp (countTweets keyword Mixed) config
+        UserTimeline           -> runApp userTweets config

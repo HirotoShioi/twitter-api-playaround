@@ -1,15 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Types
-    ( Tweet(..)
+    ( Tweet
     , decodeTweets 
+    , decodeUserTweets
     ) where
+
+import           RIO
 
 import           Data.Aeson
 import           Data.Aeson.Types
+import           Data.Extensible
 import qualified Data.ByteString.Lazy.Char8 as C8
-import           RIO
 
 decodeTweets :: C8.ByteString -> Either String [Tweet]
 decodeTweets bs =  do
@@ -17,22 +22,26 @@ decodeTweets bs =  do
   parseEither tweets jsons
 
 tweets :: Value -> Parser [Tweet]
-tweets = withObject "tweets" $ \o -> o .: "statuses"
+tweets = withObject "tweets" $ \o -> do
+    tws <- o .: "statuses"
+    mapM decodeTweet tws
 
-data Tweet = Tweet
-    { tText     :: Text
-    , tUserName :: Text
-    } deriving Show
 
-instance ToJSON Tweet where
-    toJSON (Tweet text user) =
-        object [ "text" .= text
-               , "user" .= user
-               ]
+decodeUserTweets :: C8.ByteString -> Either String [Tweet]
+decodeUserTweets bs =  do
+    jsons <- eitherDecode bs
+    parseEither (mapM decodeTweet) jsons
 
-instance FromJSON Tweet where
-    parseJSON = withObject "Tweet" $ \o -> do
-      tText  <- o .: "text"
-      userO <- o .: "user"
-      tUserName <- userO .: "name"
-      return Tweet {..}
+type Tweet = Record
+    '[ "tweet"    >: Text
+     , "userName" >: Text
+     ]
+
+decodeTweet :: Value -> Parser Tweet
+decodeTweet = withObject "Tweet" $ \o -> do
+    text  <- o .: "text"
+    userO <- o .: "user"
+    name <- userO .: "name"
+    return $ #tweet     @= text
+          <: #userName  @= name
+          <: nil
