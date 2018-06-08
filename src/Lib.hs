@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedLabels           #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE TypeOperators              #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Lib where
 
@@ -11,15 +12,10 @@ import           RIO
 
 import           Data.Extensible
 import           Network.HTTP.Conduit   (Manager, httpLbs, parseRequest,
-                                         responseBody)
-import           Web.Authenticate.OAuth (Credential, OAuth, signOAuth)
+                                         responseBody, tlsManagerSettings, newManager)
+import           Web.Authenticate.OAuth (Credential, OAuth, signOAuth, newOAuth, emptyCredential)
 
-import           Types                  (Tweet, decodeTweets, decodeUserTweets)
-
-data ResultType =
-      Mixed
-    | Recent
-    | Popular
+import           Types                  (Tweet,ResultType(..), decodeTweets, decodeUserTweets)
 
 renderResultType :: ResultType -> String
 renderResultType Mixed   = "mixed"
@@ -33,6 +29,15 @@ type Config = Record
      , "apiLayer"   >: ApiLayer App
      ]
 
+defaultConfig :: IO Config
+defaultConfig = do
+    manager <- newManager tlsManagerSettings
+    return $ #oauth      @= newOAuth
+          <: #credential @= emptyCredential
+          <: #manager    @= manager
+          <: #apiLayer   @= basicApiLayer
+          <: nil
+
 newtype App a = App (ReaderT Config IO a)
     deriving ( Functor
              , Applicative
@@ -45,15 +50,22 @@ newtype App a = App (ReaderT Config IO a)
 runApp :: App a -> Config -> IO a
 runApp (App a) = runReaderT a
 
-type ApiLayer m = Record
-    '[ "fetchHashtagTweets" >: (String -> ResultType -> Int -> m [Tweet])
-     , "fetchUserTweets"    >: m [Tweet]
-     ]
+data ApiLayer m = ApiLayer
+    { alFetchHashtagTweets :: String -> ResultType -> Int -> m [Tweet]
+    , alFetchUserTweets :: m [Tweet]
+    }
 
 basicApiLayer :: (MonadReader Config m, MonadIO m, MonadThrow m) => ApiLayer m
-basicApiLayer = #fetchHashtagTweets @= fetchHashtagTweets
-             <: #fetchUserTweets    @= fetchUserTweets
-             <: nil
+basicApiLayer = ApiLayer
+    { alFetchHashtagTweets = fetchHashtagTweets
+    , alFetchUserTweets    = fetchUserTweets
+    }
+
+emptyApiLayer :: (MonadReader Config m, MonadIO m, MonadThrow m) => ApiLayer m
+emptyApiLayer = ApiLayer
+    { alFetchHashtagTweets = \_ -> error "fetHashTagTweets are not implemented!"
+    , alFetchUserTweets    = error "fetchUserTweets are not implemented!"
+    }
 
 askAPILayer :: forall m a. (MonadReader Config m) => (ApiLayer App -> a) -> m a
 askAPILayer getter = do

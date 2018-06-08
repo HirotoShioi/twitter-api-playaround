@@ -9,7 +9,7 @@ import           Options.Applicative (Parser, ParserInfo, argument, command,
                                       execParser, fullDesc, header, help,
                                       helper, hsubparser, info, infoOption,
                                       long, metavar, progDesc, str, (<**>))
-import           Paths_school_aeson  (version)
+import           Paths_twitter_api  (version)
 
 data CLI = SearchTweets String
          | CountTweets String

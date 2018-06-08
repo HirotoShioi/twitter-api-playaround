@@ -7,15 +7,16 @@ module Main where
 
 import           RIO
 
+import Control.Lens ((.~))
 import qualified Data.ByteString.Char8  as C8
-import           Data.Extensible        (nil, (<:), (@=))
 import           Network.HTTP.Conduit   (newManager, tlsManagerSettings)
 import           Say                    (say)
 import           Web.Authenticate.OAuth (OAuth (..), newCredential, newOAuth)
 
 import           CLI                    (CLI (..), getCliArgs)
-import           Lib                    (App, Config, ResultType (..),
-                                         askAPILayer, basicApiLayer, runApp)
+import           Lib                    (defaultConfig, runApp)
+import Types
+import Functions
 
 serverName :: String
 serverName = "api.twitter.com"
@@ -33,27 +34,11 @@ setOauth name key secret = newOAuth
     , oauthConsumerSecret = secret
     }
 
-sortTweets :: String -> ResultType -> Int  -> App ()
-sortTweets query result count = do
-    fetchSearchTweets <- askAPILayer (^. #fetchHashtagTweets)
-    tws <- fetchSearchTweets query result count
-    say $ "Number of tweets:   " <> tshow (length tws)
-    mapM_ (\t -> do
-        let userName = t ^. #userName
-        let twt      = t ^. #tweet
-        say $ "**" <> userName <> "**\n" <>  twt <> "\n") tws
-
-userTweets :: App ()
-userTweets = do
-    fetchUserTweets <- askAPILayer (^. #fetchUserTweets)
-    tws <- fetchUserTweets
-    forM_ tws (\t -> say (t ^. #tweet))
-
-countTweets :: String -> ResultType -> App ()
-countTweets query result = do
-    fetchSearchTweets <- askAPILayer (^. #fetchHashtagTweets)
-    tweets <- fetchSearchTweets query result 100
-    say $ "Fetched " <> tshow (length tweets) <> " tweets!"
+printTweets :: [Tweet] -> IO ()
+printTweets ts = forM_ ts (\t -> do
+    let userName = t ^. #userName
+    let twt      = t ^. #tweet
+    say $ "**" <> userName <> "**\n" <> twt <> "\n")
 
 main :: IO ()
 main = do
@@ -64,15 +49,19 @@ main = do
     let (token: tokenSecret: _) = C8.lines credential
     let oauth   = setOauth serverName consumerKey consumerSecret
     let cred    = newCredential token tokenSecret
-    let config :: Config
-        config  = #oauth      @= oauth
-               <: #credential @= cred
-               <: #manager    @= manager
-               <: #apiLayer   @= basicApiLayer
-               <: nil
+    config <- defaultConfig
+    let config' = config & #manager    .~ manager
+                         & #oauth      .~ oauth
+                         & #credential .~ cred
     args <- getCliArgs
     -- Configuration done, don't need IO below
     case args of
-        (SearchTweets keyword) -> runApp (sortTweets keyword Mixed 100) config
-        (CountTweets keyword)  -> runApp (countTweets keyword Mixed) config
-        UserTimeline           -> runApp userTweets config
+        (SearchTweets keyword) -> do
+                                  tweets <- runApp (getSearchTweets keyword Mixed 100) config'
+                                  printTweets tweets
+        (CountTweets keyword)  -> do
+                                  count <- runApp (getTweetCount keyword Mixed) config'
+                                  say $ tshow count
+        UserTimeline           -> do
+                                  tweets <- runApp getUserTweets config'
+                                  printTweets tweets

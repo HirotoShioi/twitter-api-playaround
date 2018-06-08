@@ -5,6 +5,7 @@
 
 module Types
     ( Tweet
+    , ResultType (..)
     , decodeTweets
     , decodeUserTweets
     ) where
@@ -15,6 +16,11 @@ import           Data.Aeson                 (Value, eitherDecode)
 import           Data.Aeson.Types           (Parser, parseEither, withObject,
                                              (.:))
 import           Data.Extensible
+
+data ResultType =
+    Mixed
+  | Recent
+  | Popular
 
 decodeTweets :: LByteString -> Either String [Tweet]
 decodeTweets bs =  do
