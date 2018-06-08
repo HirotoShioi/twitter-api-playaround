@@ -16,12 +16,16 @@ import           Data.Aeson                 (Value, eitherDecode)
 import           Data.Aeson.Types           (Parser, parseEither, withObject,
                                              (.:))
 import           Data.Extensible
+import           Test.QuickCheck
 
 data ResultType =
       Mixed
     | Recent
     | Popular
+    deriving (Eq, Show)
 
+instance Arbitrary ResultType where
+    arbitrary = elements [Mixed, Recent, Popular]
 
 type Tweet = Record
   '[ "tweet"    >: Text

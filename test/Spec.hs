@@ -34,6 +34,7 @@ main = hspec $
 countTweetSpec :: Spec
 countTweetSpec = describe "CountTweets" $ modifyMaxSuccess (const 200) $ do
   it "Should return 0 when no matches were found" $
+    forAll arbitrary $ \(resultType :: ResultType) ->
     forAll arbitrary $ \(keyword :: String) ->
         monadicIO $ do
           let stubbedApiLayer :: ApiLayer App
@@ -43,10 +44,11 @@ countTweetSpec = describe "CountTweets" $ modifyMaxSuccess (const 200) $ do
           stubbedConfig <- withStubLayer stubbedApiLayer
     
           let appExecution :: IO Int
-              appExecution = runApp (getTweetCount keyword Mixed) stubbedConfig
+              appExecution = runApp (getTweetCount keyword resultType) stubbedConfig
           tweetResponse <- run appExecution
           Q.assert $ tweetResponse == 0
   it "Should return a number of tweets when there's matches" $
+    forAll arbitrary $ \(resultType :: ResultType) ->
     forAll (listOf1 arbitrary) $ \(tweets :: [Tweet]) ->
       forAll arbitrary $ \(keyword :: String) ->
         monadicIO $ do
@@ -58,7 +60,7 @@ countTweetSpec = describe "CountTweets" $ modifyMaxSuccess (const 200) $ do
           stubbedConfig <- withStubLayer stubbedApiLayer
 
           let appExecution :: IO Int
-              appExecution = runApp (getTweetCount keyword Mixed) stubbedConfig
+              appExecution = runApp (getTweetCount keyword resultType) stubbedConfig
           tweetResponse <- run appExecution
 
           Q.assert $ tweetResponse /= 0
@@ -66,6 +68,7 @@ countTweetSpec = describe "CountTweets" $ modifyMaxSuccess (const 200) $ do
 searchTweetSpec :: Spec
 searchTweetSpec = describe "SearchTweets" $ modifyMaxSuccess (const 200) $ do
   it "Should return empty list when there's no matching tweets" $
+    forAll arbitrary $ \(resultType :: ResultType) ->
     forAll arbitrary $ \(keyword :: String) ->
       forAll (choose (0,100)) $ \num ->
         monadicIO $ do
@@ -77,11 +80,12 @@ searchTweetSpec = describe "SearchTweets" $ modifyMaxSuccess (const 200) $ do
           stubbedConfig <- withStubLayer stubbedApiLayer
 
           let appExecution :: IO [Tweet]
-              appExecution = runApp (getSearchTweets keyword Mixed num) stubbedConfig
+              appExecution = runApp (getSearchTweets keyword resultType num) stubbedConfig
           tweetResponse <- run appExecution
 
           Q.assert $ null tweetResponse
   it "Should return given number of tweets" $
+    forAll arbitrary $ \(resultType :: ResultType) -> 
     forAll (choose (0,100)) $ \num ->
       forAll (vectorOf num arbitrary) $ \(tweets :: [Tweet]) ->
         forAll arbitrary $ \(keyword :: String) ->
@@ -94,7 +98,7 @@ searchTweetSpec = describe "SearchTweets" $ modifyMaxSuccess (const 200) $ do
             stubbedConfig <- withStubLayer stubbedApiLayer
 
             let appExecution :: IO [Tweet]
-                appExecution = runApp (getSearchTweets keyword Mixed num) stubbedConfig
+                appExecution = runApp (getSearchTweets keyword resultType num) stubbedConfig
             tweetResponse <- run appExecution
 
             Q.assert $ length tweetResponse == num
