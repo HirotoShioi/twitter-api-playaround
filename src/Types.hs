@@ -18,9 +18,15 @@ import           Data.Aeson.Types           (Parser, parseEither, withObject,
 import           Data.Extensible
 
 data ResultType =
-    Mixed
-  | Recent
-  | Popular
+      Mixed
+    | Recent
+    | Popular
+
+
+type Tweet = Record
+  '[ "tweet"    >: Text
+   , "userName" >: Text
+   ]
 
 decodeTweets :: LByteString -> Either String [Tweet]
 decodeTweets bs =  do
@@ -37,11 +43,6 @@ decodeUserTweets :: LByteString -> Either String [Tweet]
 decodeUserTweets bs =  do
     jsons <- eitherDecode bs
     parseEither (mapM decodeTweet) jsons
-
-type Tweet = Record
-    '[ "tweet"    >: Text
-     , "userName" >: Text
-     ]
 
 decodeTweet :: Value -> Parser Tweet
 decodeTweet = withObject "Tweet" $ \o -> do

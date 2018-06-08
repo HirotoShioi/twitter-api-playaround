@@ -1,9 +1,13 @@
-module Functions where
+module Functions
+    ( getTweetCount
+    , getSearchTweets
+    , getUserTweets
+    ) where
 
-import RIO
+import           RIO
 
-import Types
-import Lib
+import           Lib (App, askAPILayer, ApiLayer(..))
+import           Types (ResultType, Tweet)
 
 getTweetCount :: String -> ResultType -> App Int
 getTweetCount query result = do

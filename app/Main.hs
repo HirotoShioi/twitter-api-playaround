@@ -7,16 +7,16 @@ module Main where
 
 import           RIO
 
-import Control.Lens ((.~))
+import           Control.Lens           ((.~))
 import qualified Data.ByteString.Char8  as C8
 import           Network.HTTP.Conduit   (newManager, tlsManagerSettings)
 import           Say                    (say)
 import           Web.Authenticate.OAuth (OAuth (..), newCredential, newOAuth)
 
 import           CLI                    (CLI (..), getCliArgs)
+import           Functions
 import           Lib                    (defaultConfig, runApp)
-import Types
-import Functions
+import           Types
 
 serverName :: String
 serverName = "api.twitter.com"

@@ -2,20 +2,31 @@
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedLabels           #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE TypeOperators              #-}
-{-# LANGUAGE OverloadedStrings #-}
 
-module Lib where
+module Lib
+    ( Config
+    , ApiLayer (..)
+    , App
+    , defaultConfig
+    , runApp
+    , emptyApiLayer
+    , askAPILayer
+    ) where
 
 import           RIO
 
 import           Data.Extensible
-import           Network.HTTP.Conduit   (Manager, httpLbs, parseRequest,
-                                         responseBody, tlsManagerSettings, newManager)
-import           Web.Authenticate.OAuth (Credential, OAuth, signOAuth, newOAuth, emptyCredential)
+import           Network.HTTP.Conduit   (Manager, httpLbs, newManager,
+                                         parseRequest, responseBody,
+                                         tlsManagerSettings)
+import           Web.Authenticate.OAuth (Credential, OAuth, emptyCredential,
+                                         newOAuth, signOAuth)
 
-import           Types                  (Tweet,ResultType(..), decodeTweets, decodeUserTweets)
+import           Types                  (ResultType (..), Tweet, decodeTweets,
+                                         decodeUserTweets)
 
 renderResultType :: ResultType -> String
 renderResultType Mixed   = "mixed"
@@ -52,7 +63,7 @@ runApp (App a) = runReaderT a
 
 data ApiLayer m = ApiLayer
     { alFetchHashtagTweets :: String -> ResultType -> Int -> m [Tweet]
-    , alFetchUserTweets :: m [Tweet]
+    , alFetchUserTweets    :: m [Tweet]
     }
 
 basicApiLayer :: (MonadReader Config m, MonadIO m, MonadThrow m) => ApiLayer m
